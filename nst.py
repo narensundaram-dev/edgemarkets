@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import logging
 from datetime import datetime as dt
 
 import yagmail
@@ -12,22 +13,22 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
 
+
 import utils
 
 
 log = utils.get_logger(os.path.split(__file__)[-1])
 
 
-JSONF_LAST_UPDATE = "last_news_edgemarkets.json"
+JSONF_LAST_UPDATE = "last_news_nst.json"
 
 
-class EdgeMarkets(object):
-
-    base_url = "https://www.theedgemarkets.com"
-    endpoint = "/categories/malaysia"
+class NST(object):
+    base_url = "https://www.nst.com.my"
+    endpoint = "/business"
 
     def __init__(self, settings):
-        self.strtime = "%b %d, %Y %I:%M %p"
+        self.strtime = "%b %d, %Y @ %I:%M%p"
 
         self.settings = settings
 
@@ -42,24 +43,22 @@ class EdgeMarkets(object):
         url = self.base_url + self.endpoint
         self.chrome.get(url)
         wait = self.settings["page_load_timeout"]["value"]
-        WebDriverWait(self.chrome, wait).until(EC.presence_of_element_located((By.CLASS_NAME, "views-view-grid")))
-        log.info(f"Loaded the web page - {url}")
-
+        WebDriverWait(self.chrome, wait).until(EC.presence_of_element_located((By.CLASS_NAME, "container-fluid")))
         soup = BeautifulSoup(self.chrome.page_source, "html.parser")
-        newss = soup.find("div", class_="views-view-grid").select("div.grid.col-lg-4.col-md-4.col-sm-4.col-xs-12")
-        for news in newss:
-            create_time = news.find("div", class_="views-field-created").text.strip()
-            soup_title = news.find("div", class_="views-field-title").find("a")
-            title, link = soup_title.text, soup_title.attrs["href"]
 
-            ct = dt.strptime(f"{dt.now().year}, {create_time}", "%Y, %d %b | %I:%M%p").strftime(self.strtime)
-            self.news.append({
-                "url": self.base_url + link,
-                "title": title,
-                "create_time": ct
-            })
+        cards = soup.find_all("div", class_="article-teaser")
+        for card in cards:
+            if "native-loaded" not in card.attrs["class"]:
+                create_time = card.find("span", class_="created-ago").text.strip()
+                url = card.find("a").attrs["href"]
+                title = card.find("h3", class_="field-title").text.strip()
+                self.news.append({
+                    "create_time": create_time,
+                    "title": title,
+                    "url": self.base_url + url,
+                })
+        self.chrome.quit()
         
-        self.chrome.close()
 
     def filter_news(self):
         if not os.path.exists(os.path.join(os.getcwd(), JSONF_LAST_UPDATE)):
@@ -93,7 +92,7 @@ class EdgeMarkets(object):
                 for news in newss:
                     contents.extend([
                         f"Time: {news['create_time']}",
-                        f"News: {news['title']}",
+                        f"Category: {news['title']}",
                         f"Link: {news['url']}",
                         "\n"
                     ])
@@ -103,7 +102,7 @@ class EdgeMarkets(object):
                 yag = yagmail.SMTP(user=user, password=password)
                 yag.send(
                     to=to, 
-                    subject='Notification | The Edge Markets.', 
+                    subject='Notification | NST.', 
                     contents=contents
                 )
                 log.info(f"Email notification sent to {to}")
@@ -113,12 +112,17 @@ class EdgeMarkets(object):
             log.info("No recent news. No email is triggered.")
 
 
+def get_settings():
+    with open("settings.json", "r") as f:
+        return json.load(f)
+
+
 def main():
     start = dt.now()
     log.info("Script starts at: {}".format(start.strftime("%d-%m-%Y %H:%M:%S %p")))
 
-    settings = utils.get_settings()
-    EdgeMarkets(settings).notify()
+    settings = get_settings()
+    NST(settings).notify()
 
     end = dt.now()
     log.info("Script ends at: {}".format(end.strftime("%d-%m-%Y %H:%M:%S %p")))

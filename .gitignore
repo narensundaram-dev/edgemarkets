@@ -1,1 +1,6 @@
 venv
+.ipynb*
+.vscode
+__pycache__
+last_news*.json
+*.ipynb

@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import logging
 from datetime import datetime as dt
 
 import yagmail
@@ -12,19 +13,20 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
 
+
 import utils
 
 
 log = utils.get_logger(os.path.split(__file__)[-1])
 
 
-JSONF_LAST_UPDATE = "last_news_edgemarkets.json"
+JSONF_LAST_UPDATE = "last_news_thestar.json"
 
 
-class EdgeMarkets(object):
+class TheStar(object):
 
-    base_url = "https://www.theedgemarkets.com"
-    endpoint = "/categories/malaysia"
+    base_url = "https://www.thestar.com.my"
+    endpoint = "/news/latest?tag=Business"
 
     def __init__(self, settings):
         self.strtime = "%b %d, %Y %I:%M %p"
@@ -42,24 +44,21 @@ class EdgeMarkets(object):
         url = self.base_url + self.endpoint
         self.chrome.get(url)
         wait = self.settings["page_load_timeout"]["value"]
-        WebDriverWait(self.chrome, wait).until(EC.presence_of_element_located((By.CLASS_NAME, "views-view-grid")))
-        log.info(f"Loaded the web page - {url}")
+        WebDriverWait(self.chrome, wait).until(EC.presence_of_element_located((By.ID, "2a")))
 
         soup = BeautifulSoup(self.chrome.page_source, "html.parser")
-        newss = soup.find("div", class_="views-view-grid").select("div.grid.col-lg-4.col-md-4.col-sm-4.col-xs-12")
-        for news in newss:
-            create_time = news.find("div", class_="views-field-created").text.strip()
-            soup_title = news.find("div", class_="views-field-title").find("a")
-            title, link = soup_title.text, soup_title.attrs["href"]
+        tiles = soup.find_all("li", class_="row")
+        for tile in tiles:
+            soup_desc = tile.find(lambda tag: tag.name == 'a' and 'data-content-id' in tag.attrs)
 
-            ct = dt.strptime(f"{dt.now().year}, {create_time}", "%Y, %d %b | %I:%M%p").strftime(self.strtime)
             self.news.append({
-                "url": self.base_url + link,
-                "title": title,
-                "create_time": ct
+                "id": soup_desc.attrs["data-content-id"],
+                "url": soup_desc.attrs["href"],
+                "create_time": tile.find("time", class_="timestamp").text,
+                "title": tile.find("a", class_="kicker").text,
+                "description": soup_desc.text.strip()
             })
-        
-        self.chrome.close()
+        self.chrome.quit()
 
     def filter_news(self):
         if not os.path.exists(os.path.join(os.getcwd(), JSONF_LAST_UPDATE)):
@@ -68,15 +67,19 @@ class EdgeMarkets(object):
 
             return self.news
 
+        newss = []
         with open(JSONF_LAST_UPDATE) as f:
-            last_news_time = dt.strptime(json.load(f)["create_time"], self.strtime)
-            newss = list(filter(lambda x: dt.strptime(x["create_time"], self.strtime) > last_news_time, self.news))
+            last_news_id = json.load(f)["id"]
+            for news in self.news:
+                if news["id"] == last_news_id:
+                    break
+                newss.append(news)
 
             if newss:
                 with open(JSONF_LAST_UPDATE, "w+") as f:
                     json.dump(newss[0], f, indent=2)
 
-            return newss
+        return newss
 
     def notify(self):
         self.get_news()
@@ -93,7 +96,8 @@ class EdgeMarkets(object):
                 for news in newss:
                     contents.extend([
                         f"Time: {news['create_time']}",
-                        f"News: {news['title']}",
+                        f"Category: {news['title']}",
+                        f"News: {news['description']}",
                         f"Link: {news['url']}",
                         "\n"
                     ])
@@ -103,7 +107,7 @@ class EdgeMarkets(object):
                 yag = yagmail.SMTP(user=user, password=password)
                 yag.send(
                     to=to, 
-                    subject='Notification | The Edge Markets.', 
+                    subject='Notification | The Star.', 
                     contents=contents
                 )
                 log.info(f"Email notification sent to {to}")
@@ -113,12 +117,17 @@ class EdgeMarkets(object):
             log.info("No recent news. No email is triggered.")
 
 
+def get_settings():
+    with open("settings.json", "r") as f:
+        return json.load(f)
+
+
 def main():
     start = dt.now()
     log.info("Script starts at: {}".format(start.strftime("%d-%m-%Y %H:%M:%S %p")))
 
-    settings = utils.get_settings()
-    EdgeMarkets(settings).notify()
+    settings = get_settings()
+    TheStar(settings).notify()
 
     end = dt.now()
     log.info("Script ends at: {}".format(end.strftime("%d-%m-%Y %H:%M:%S %p")))
