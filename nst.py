@@ -67,9 +67,13 @@ class NST(object):
 
             return self.news
 
+        newss = []
         with open(JSONF_LAST_UPDATE) as f:
-            last_news_time = dt.strptime(json.load(f)["create_time"], self.strtime)
-            newss = list(filter(lambda x: dt.strptime(x["create_time"], self.strtime) > last_news_time, self.news))
+            last_news_url = json.load(f)["url"]
+            for news in self.news:
+                if news["url"] == last_news_url:
+                    break
+                newss.append(news)
 
             if newss:
                 with open(JSONF_LAST_UPDATE, "w+") as f:
