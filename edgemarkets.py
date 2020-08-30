@@ -59,7 +59,7 @@ class EdgeMarkets(object):
                 "create_time": ct
             })
         
-        self.chrome.close()
+        self.chrome.quit()
 
     def filter_news(self):
         if not os.path.exists(os.path.join(os.getcwd(), JSONF_LAST_UPDATE)):
