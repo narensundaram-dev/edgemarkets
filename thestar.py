@@ -34,7 +34,9 @@ class TheStar(object):
         self.settings = settings
 
         options = webdriver.ChromeOptions()
+        options.add_argument('--no-sandbox')
         options.add_argument('--headless')
+        options.add_argument('--disable-dev-shm-usage')
         log_path = '/dev/null' if sys.platform == "linux" else "NUL"
         self.chrome = webdriver.Chrome(self.settings["driver_path"]["value"], chrome_options=options, service_log_path=log_path)
 
