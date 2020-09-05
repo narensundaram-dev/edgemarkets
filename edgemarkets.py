@@ -3,6 +3,7 @@ import sys
 import json
 from datetime import datetime as dt
 
+import psutil
 import yagmail
 from bs4 import BeautifulSoup, NavigableString
 
@@ -61,6 +62,16 @@ class EdgeMarkets(object):
                 "create_time": ct
             })
         
+        self.shutdown()
+
+    def shutdown(self):
+        process = psutil.Process(self.chrome.service.process.pid)
+        for child_process in process.children(recursive=True):
+            log.debug(f"Killing child process: ({child_process.pid}) - {child_process.name()} [{child_process.status()}]")
+            child_process.kill()
+        
+        log.debug(f"Killing main process: ({process.pid}) - {process.name()} [{process.status()}]")
+        process.kill()
         self.chrome.quit()
 
     def filter_news(self):
@@ -117,7 +128,7 @@ class EdgeMarkets(object):
 
 def main():
     start = dt.now()
-    log.info("Script starts at: {}".format(start.strftime("%d-%m-%Y %H:%M:%S %p")))
+    log.info("\nScript starts at: {}".format(start.strftime("%d-%m-%Y %H:%M:%S %p")))
 
     settings = utils.get_settings()
     EdgeMarkets(settings).notify()

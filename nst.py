@@ -4,6 +4,7 @@ import json
 import logging
 from datetime import datetime as dt
 
+import psutil
 import yagmail
 from bs4 import BeautifulSoup, NavigableString
 
@@ -59,8 +60,17 @@ class NST(object):
                     "title": title,
                     "url": self.base_url + url,
                 })
-        self.chrome.quit()
+        self.shutdown()
+
+    def shutdown(self):
+        process = psutil.Process(self.chrome.service.process.pid)
+        for child_process in process.children(recursive=True):
+            log.debug(f"Killing child process: ({child_process.pid}) - {child_process.name()} [{child_process.status()}]")
+            child_process.kill()
         
+        log.debug(f"Killing main process: ({process.pid}) - {process.name()} [{process.status()}]")
+        process.kill()
+        self.chrome.quit() 
 
     def filter_news(self):
         if not os.path.exists(os.path.join(os.getcwd(), JSONF_LAST_UPDATE)):
@@ -125,7 +135,7 @@ def get_settings():
 
 def main():
     start = dt.now()
-    log.info("Script starts at: {}".format(start.strftime("%d-%m-%Y %H:%M:%S %p")))
+    log.info("\nScript starts at: {}".format(start.strftime("%d-%m-%Y %H:%M:%S %p")))
 
     settings = get_settings()
     NST(settings).notify()
