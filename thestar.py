@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import json
 import logging
@@ -58,7 +59,7 @@ class TheStar(object):
                 "id": soup_desc.attrs["data-content-id"],
                 "url": soup_desc.attrs["href"],
                 "create_time": tile.find("time", class_="timestamp").text,
-                "title": tile.find("a", class_="kicker").text,
+                "title": tile.find(re.compile("(a|span)"), class_="kicker").text,
                 "description": soup_desc.text.strip()
             })
         self.shutdown()
