@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-import signal
 from datetime import datetime as dt
 
 import psutil
@@ -68,15 +67,12 @@ class EdgeMarkets(object):
     def shutdown(self):
         process = psutil.Process(self.chrome.service.process.pid)
         for child_process in process.children(recursive=True):
-            try:
+            if psutil.pid_exists(child_process.pid):
                 log.info(f"Killing child process: ({child_process.pid}) - {child_process.name()} [{child_process.status()}]")
                 child_process.kill()
-            except (FileNotFoundError, psutil.NoSuchProcess) as _:
-                log.info(f"Already process' killed ({child_process.pid}).")
         
         log.info(f"Killing main process: ({process.pid}) - {process.name()} [{process.status()}]")
-        # process.kill()
-        os.kill(child_process.pid, signal.SIGKILL)
+        process.kill()
         self.chrome.quit()
 
     def filter_news(self):
