@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import signal
 from datetime import datetime as dt
 
 import psutil
@@ -74,7 +75,8 @@ class EdgeMarkets(object):
                 log.info(f"Already process' killed ({child_process.pid}).")
         
         log.info(f"Killing main process: ({process.pid}) - {process.name()} [{process.status()}]")
-        process.kill()
+        # process.kill()
+        os.kill(child_process.pid, signal.SIGKILL)
         self.chrome.quit()
 
     def filter_news(self):

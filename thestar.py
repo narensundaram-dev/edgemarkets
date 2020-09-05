@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import signal
 import logging
 from datetime import datetime as dt
 
@@ -68,7 +69,8 @@ class TheStar(object):
         for child_process in process.children(recursive=True):            
             try:
                 log.info(f"Killing child process: ({child_process.pid}) - {child_process.name()} [{child_process.status()}]")
-                child_process.kill()
+                # child_process.kill()
+                os.kill(child_process.pid, signal.SIGKILL)
             except (FileNotFoundError, psutil.NoSuchProcess) as _:
                 log.info(f"Already process' killed ({child_process.pid}).")
         
