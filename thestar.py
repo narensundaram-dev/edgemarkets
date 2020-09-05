@@ -70,7 +70,7 @@ class TheStar(object):
                 log.info(f"Killing child process: ({child_process.pid}) - {child_process.name()} [{child_process.status()}]")
                 child_process.kill()
             except (FileNotFoundError, psutil.NoSuchProcess) as _:
-                log.info("Already a dead process.")
+                log.info(f"Already process' killed ({child_process.pid}).")
         
         log.info(f"Killing main process: ({process.pid}) - {process.name()} [{process.status()}]")
         process.kill()
