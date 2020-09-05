@@ -71,7 +71,7 @@ class EdgeMarkets(object):
 
             try:
                 child_process.kill()
-            except psutil.NoSuchProcess as _:
+            except (FileNotFoundError, psutil.NoSuchProcess) as _:
                 log.debug("Already a dead process.")
         
         log.debug(f"Killing main process: ({process.pid}) - {process.name()} [{process.status()}]")
