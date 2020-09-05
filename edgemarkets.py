@@ -128,7 +128,8 @@ class EdgeMarkets(object):
 
 def main():
     start = dt.now()
-    log.info("\nScript starts at: {}".format(start.strftime("%d-%m-%Y %H:%M:%S %p")))
+    print("")
+    log.info("Script starts at: {}".format(start.strftime("%d-%m-%Y %H:%M:%S %p")))
 
     settings = utils.get_settings()
     EdgeMarkets(settings).notify()

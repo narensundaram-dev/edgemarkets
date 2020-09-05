@@ -135,7 +135,8 @@ def get_settings():
 
 def main():
     start = dt.now()
-    log.info("\nScript starts at: {}".format(start.strftime("%d-%m-%Y %H:%M:%S %p")))
+    print("")
+    log.info("Script starts at: {}".format(start.strftime("%d-%m-%Y %H:%M:%S %p")))
 
     settings = get_settings()
     NST(settings).notify()
