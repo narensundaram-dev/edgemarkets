@@ -65,9 +65,12 @@ class NST(object):
     def shutdown(self):
         process = psutil.Process(self.chrome.service.process.pid)
         for child_process in process.children(recursive=True):
-            if psutil.pid_exists(child_process.pid):
-                log.info(f"Killing child process: ({child_process.pid}) - {child_process.name()} [{child_process.status()}]")
-                child_process.kill()
+            try:
+                if psutil.pid_exists(child_process.pid):
+                    log.info(f"Killing child process: ({child_process.pid}) - {child_process.name()} [{child_process.status()}]")
+                    child_process.kill()
+            except Exception as e:
+                log.error(f"Couldn't kill process ({child_process.pid}). May be already killed!")
         
         log.info(f"Killing main process: ({process.pid}) - {process.name()} [{process.status()}]")
         process.kill()
